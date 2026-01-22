@@ -106,8 +106,16 @@
                 clearTimeout(retryTimeout);
             }
 
+            // Ensure protocol is present
+            let connectionAddr = addr;
+            if (!connectionAddr.startsWith('ws://') && !connectionAddr.startsWith('wss://')) {
+                connectionAddr = 'ws://' + connectionAddr;
+            }
+
+            console.log('Connecting to:', connectionAddr);
+
             try {
-                socket = new WebSocket(addr);
+                socket = new WebSocket(connectionAddr);
                 socket.binaryType = 'blob';
 
                 socket.onopen = () => {
@@ -148,7 +156,7 @@
                 };
             } catch (e) {
                 console.error('Connection failed:', e);
-                status.textContent = 'Error: Invalid Address';
+                status.textContent = `Error: Invalid Address (${addr})`;
                 status.className = 'status disconnected';
             }
         }
