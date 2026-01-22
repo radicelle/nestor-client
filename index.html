@@ -107,15 +107,21 @@
             }
 
             // Clean address and handle protocols
-            let cleanAddr = addr.trim().replace(/^https?:\/\//, '');
-            let connectionAddr;
-            
-            if (!cleanAddr.startsWith('ws://') && !cleanAddr.startsWith('wss://')) {
+            // Remove surrounding quotes if present (copy-paste error) and whitespace
+            let connectionAddr = addr.trim().replace(/^['"]|['"]$/g, '');
+
+            // Handle http/https replacement
+            if (connectionAddr.startsWith('http://')) {
+                connectionAddr = connectionAddr.replace(/^http:\/\//, 'ws://');
+            } else if (connectionAddr.startsWith('https://')) {
+                connectionAddr = connectionAddr.replace(/^https:\/\//, 'wss://');
+            }
+
+            // If no protocol specified, add it
+            if (!connectionAddr.startsWith('ws://') && !connectionAddr.startsWith('wss://')) {
                 // Use wss:// if the site is served over https
                 const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                connectionAddr = protocol + cleanAddr;
-            } else {
-                connectionAddr = cleanAddr;
+                connectionAddr = protocol + connectionAddr;
             }
 
             console.log('Connecting to:', connectionAddr);
@@ -162,7 +168,7 @@
                 };
             } catch (e) {
                 console.error('Connection failed:', e);
-                status.textContent = `Error: Invalid Address (${addr})`;
+                status.textContent = `Error: Invalid Address (${connectionAddr})`;
                 status.className = 'status disconnected';
             }
         }
