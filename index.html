@@ -127,6 +127,11 @@
             console.log('Connecting to:', connectionAddr);
 
             try {
+                // Check for Mixed Content (HTTPS page trying to access WS)
+                if (window.location.protocol === 'https:' && connectionAddr.startsWith('ws://')) {
+                    throw new Error("Mixed Content Error: Cannot connect to insecure 'ws://' from secure 'https://'. Please use 'wss://' or run the client locally (http).");
+                }
+
                 socket = new WebSocket(connectionAddr);
                 socket.binaryType = 'blob';
 
@@ -168,7 +173,8 @@
                 };
             } catch (e) {
                 console.error('Connection failed:', e);
-                status.textContent = `Error: Invalid Address (${connectionAddr})`;
+                // Display the specific error message if available
+                status.textContent = `Error: ${e.message || 'Invalid Address'} (${connectionAddr})`;
                 status.className = 'status disconnected';
             }
         }
