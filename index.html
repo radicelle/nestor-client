@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust Camera Stream</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #222;
+            color: white;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #stream {
+            max-width: 100%;
+            border: 2px solid #555;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .status {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .connected { color: #4CAF50; }
+        .disconnected { color: #F44336; }
+        .config {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #333;
+            color: white;
+            width: 300px;
+        }
+        button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Nestor Emit - Live Stream</h1>
+    
+    <div class="config">
+        <input type="text" id="serverAddr" placeholder="Ex: ws://127.0.0.1:9002" />
+        <button onclick="saveAndConnect()">Connect</button>
+    </div>
+
+    <div style="display: flex; gap: 20px;">
+        <div id="status" class="status disconnected">Disconnected</div>
+        <div id="fps" class="status" style="background: #333;">FPS: 0</div>
+    </div>
+    <img id="stream" src="" alt="Live Camera Stream">
+
+    <script>
+        const img = document.getElementById('stream');
+        const status = document.getElementById('status');
+        const fpsDisplay = document.getElementById('fps');
+        const serverInput = document.getElementById('serverAddr');
+        
+        let socket;
+        let objectURL;
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let retryTimeout;
+
+        // Load saved address from localStorage
+        const savedAddr = localStorage.getItem('nestor-server-addr');
+        if (savedAddr) {
+            serverInput.value = savedAddr;
+        }
+
+        function saveAndConnect() {
+            const addr = serverInput.value.trim();
+            if (!addr) return;
+            
+            localStorage.setItem('nestor-server-addr', addr);
+            connect(addr);
+        }
+
+        function connect(addr) {
+            if (socket) {
+                socket.close();
+            }
+            if (retryTimeout) {
+                clearTimeout(retryTimeout);
+            }
+
+            try {
+                socket = new WebSocket(addr);
+                socket.binaryType = 'blob';
+
+                socket.onopen = () => {
+                    status.textContent = 'Connected';
+                    status.className = 'status connected';
+                    console.log('Connected to WebSocket');
+                };
+
+                socket.onmessage = (event) => {
+                    const blob = event.data;
+                    
+                    frameCount++;
+                    const now = performance.now();
+                    if (now - lastTime >= 1000) {
+                        fpsDisplay.textContent = `FPS: ${frameCount}`;
+                        frameCount = 0;
+                        lastTime = now;
+                    }
+
+                    if (objectURL) {
+                        URL.revokeObjectURL(objectURL);
+                    }
+                    
+                    objectURL = URL.createObjectURL(blob);
+                    img.src = objectURL;
+                };
+
+                socket.onclose = () => {
+                    status.textContent = 'Disconnected - Retrying...';
+                    status.className = 'status disconnected';
+                    console.log('WebSocket closed, retrying in 2s...');
+                    retryTimeout = setTimeout(() => connect(addr), 2000);
+                };
+
+                socket.onerror = (err) => {
+                    console.error('WebSocket error:', err);
+                    socket.close();
+                };
+            } catch (e) {
+                console.error('Connection failed:', e);
+                status.textContent = 'Error: Invalid Address';
+                status.className = 'status disconnected';
+            }
+        }
+
+        // Auto-connect if an address was already saved
+        if (savedAddr) {
+            connect(savedAddr);
+        }
+    </script>
+</body>
+</html>
