@@ -106,10 +106,16 @@
                 clearTimeout(retryTimeout);
             }
 
-            // Ensure protocol is present
-            let connectionAddr = addr;
-            if (!connectionAddr.startsWith('ws://') && !connectionAddr.startsWith('wss://')) {
-                connectionAddr = 'ws://' + connectionAddr;
+            // Clean address and handle protocols
+            let cleanAddr = addr.trim().replace(/^https?:\/\//, '');
+            let connectionAddr;
+            
+            if (!cleanAddr.startsWith('ws://') && !cleanAddr.startsWith('wss://')) {
+                // Use wss:// if the site is served over https
+                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                connectionAddr = protocol + cleanAddr;
+            } else {
+                connectionAddr = cleanAddr;
             }
 
             console.log('Connecting to:', connectionAddr);
