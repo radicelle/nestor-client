@@ -80,10 +80,14 @@
         let lastTime = performance.now();
         let retryTimeout;
 
-        // Load saved address from localStorage
-        const savedAddr = localStorage.getItem('nestor-server-addr');
+        // Load address from URL param or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        let savedAddr = urlParams.get('addr') || localStorage.getItem('nestor-server-addr');
+        
         if (savedAddr) {
             serverInput.value = savedAddr;
+            // Persist the URL param if it was provided
+            localStorage.setItem('nestor-server-addr', savedAddr);
         }
 
         function saveAndConnect() {
